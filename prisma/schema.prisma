@@ -19,14 +19,140 @@ model User {
   name      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  // Relations
+  servers   Server[]
+  schedules Schedule[]
+  playlists Playlist[]
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Server {
+  id          String   @id @default(cuid())
+  name        String
+  host        String
+  port        Int      @default(80)
+  username    String
+  password    String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  streams     Stream[]
+  logs        Log[]
+}
+
+model Stream {
+  id          String   @id @default(cuid())
+  name        String
+  streamKey   String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  serverId    String
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  schedules   Schedule[]
+}
+
+model Playlist {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       PlaylistItem[]
+  schedules   Schedule[]
+}
+
+model PlaylistItem {
+  id          String   @id @default(cuid())
+  title       String
+  sourceUrl   String
+  duration    Int      // in seconds
+  order       Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  playlistId  String
+  playlist    Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+}
+
+model Schedule {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  isRecurring Boolean  @default(false)
+  recurringPattern String? // cron expression for recurring schedules
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  streamId    String?
+  stream      Stream?  @relation(fields: [streamId], references: [id], onDelete: SetNull)
+  playlistId  String?
+  playlist    Playlist? @relation(fields: [playlistId], references: [id], onDelete: SetNull)
+  items       ScheduleItem[]
+  logs        Log[]
+}
+
+model ScheduleItem {
+  id          String   @id @default(cuid())
+  title       String
+  sourceUrl   String
+  duration    Int      // in seconds
+  startTime   DateTime
+  endTime     DateTime
+  order       Int
+  status      ScheduleStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  scheduleId  String
+  schedule    Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+}
+
+model Log {
+  id          String   @id @default(cuid())
+  level       LogLevel @default(INFO)
+  message     String
+  metadata    String?  // JSON string for additional data
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  serverId    String?
+  server      Server?  @relation(fields: [serverId], references: [id], onDelete: SetNull)
+  scheduleId  String?
+  schedule    Schedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+}
+
+enum ScheduleStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum LogLevel {
+  DEBUG
+  INFO
+  WARN
+  ERROR
 }
